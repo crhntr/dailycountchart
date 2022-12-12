@@ -16,7 +16,10 @@
 </head>
 <body>
 {{range .}}
-    {{.}}
+  <div>
+    <h2>{{.Year}}</h2>
+    {{.HTML}}
+  </div>
 {{end}}
 <div>Total clicked: <span id="total-clicked">0</span></div>
 </body>
