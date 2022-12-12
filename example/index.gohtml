@@ -1,0 +1,22 @@
+<html>
+<head>
+  <title>DailyDot Example</title>
+  <script>
+      let totalClicked = 0
+      document.addEventListener("click", function(event) {
+          if (!event.target.matches('.daily-count-chart-day')) { return }
+          const dailyDotEl = event.target
+          document.body.insertAdjacentHTML('beforeend', `<div>clicked ${dailyDotEl.getAttribute('title')}</div>`)
+
+          totalClicked += parseInt(dailyDotEl.getAttribute("data-day"))
+          const totalClickedEl = document.querySelector("#total-clicked")
+          totalClickedEl.innerText = totalClicked.toString()
+      })
+  </script>
+</head>
+<body>
+{{range .}}
+    {{.}}
+{{end}}
+<div id="total-clicked">0</div>
+</body>

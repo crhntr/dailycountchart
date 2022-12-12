@@ -1,0 +1,9 @@
+{{- define "daily-count-chart" -}}
+<div class="daily-count-chart" data-year=".Year">{{- /**/ -}}
+  <div class="daily-count-chart-day-grid" style="display: grid; grid-template-columns: repeat(54, 1.2rem); grid-auto-rows: 1.2rem; column-gap: .2rem; row-gap: .2rem; padding: 1rem;">
+  {{- range $.Days -}}
+    <div class="daily-count-chart-day" style="background: {{.Color}}; grid-row: {{.GridRow}}; grid-column: {{.GridColumn}};" title="{{.TitleAttributeValue}}" data-day="{{.DataDayAttributeValue}}"></div>
+  {{- end -}}
+  </div>{{- /* */ -}}
+</div>
+{{- end -}}
