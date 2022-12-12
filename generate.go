@@ -14,23 +14,16 @@ type Element interface {
 	Timestamp() time.Time
 }
 
-type yearData[E Element] struct {
-	totalElementCount, year int
-	configuration           *Configuration[E]
-
-	days []Day[E]
-}
-
 type Configuration[E Element] struct {
 	EmptyDayColor template.CSS
 	ColorFunc     func(min, max, n int) template.CSS
 
-	ChartHeadingTitle      func(year int) string
-	DayTitleAttributeValue func(day Day[E]) string
-	DataDayAttributeValue  func(day Day[E]) string
+	ChartHeadingTitle  func(year int) string
+	DataValueAttribute func(day Day[E]) string
+	TitleAttribute     func(day Day[E]) string
 }
 
-func DefaultConfiguration[E Element]() *Configuration[E] {
+func Default[E Element]() *Configuration[E] {
 	return &Configuration[E]{
 		EmptyDayColor: "#EAEAEA",
 		ColorFunc:     ColorFunc(127),
@@ -45,21 +38,26 @@ var (
 )
 
 func New[E Element, List []E](elements List, configuration *Configuration[E]) ([]template.HTML, error) {
+	if configuration == nil {
+		configuration = Default[E]()
+	}
 	var (
 		result []template.HTML
 		buf    bytes.Buffer
 	)
 	for _, year := range years(elements) {
 		buf.Reset()
-		data := newYear(year, elements, configuration)
+		days, count := newYear(year, elements, configuration)
 		err := templates.ExecuteTemplate(&buf, "daily-count-chart", struct {
 			Year int
 			*Configuration[E]
-			Days []Day[E]
+			Days  []Day[E]
+			Total int
 		}{
-			Year:          data.year,
+			Year:          year,
 			Configuration: configuration,
-			Days:          data.days,
+			Days:          days,
+			Total:         count,
 		})
 		if err != nil {
 			return nil, err
@@ -69,7 +67,7 @@ func New[E Element, List []E](elements List, configuration *Configuration[E]) ([
 	return result, nil
 }
 
-func newYear[E Element](year int, elements []E, configuration *Configuration[E]) yearData[E] {
+func newYear[E Element](year int, elements []E, configuration *Configuration[E]) ([]Day[E], int) {
 	days := make([]Day[E], 0, 366)
 
 	janFirst := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -97,12 +95,7 @@ func newYear[E Element](year int, elements []E, configuration *Configuration[E])
 	}
 	setColors(days, configuration)
 
-	return yearData[E]{
-		configuration:     configuration,
-		totalElementCount: count,
-		year:              year,
-		days:              days,
-	}
+	return days, count
 }
 
 type Day[E Element] struct {
@@ -133,18 +126,18 @@ func (day Day[E]) Elements() []E {
 	return day.elements
 }
 
-func (day Day[E]) DataDayAttributeValue() string {
-	if day.configuration.DataDayAttributeValue == nil {
+func (day Day[E]) DataValueAttribute() string {
+	if day.configuration.DataValueAttribute == nil {
 		return fmt.Sprintf("%d", len(day.elements))
 	}
-	return day.configuration.DataDayAttributeValue(day)
+	return day.configuration.DataValueAttribute(day)
 }
 
-func (day Day[E]) TitleAttributeValue() string {
-	if day.configuration.DayTitleAttributeValue == nil {
+func (day Day[E]) TitleAttribute() string {
+	if day.configuration.TitleAttribute == nil {
 		return fmt.Sprintf("%s [%d]", day.time.Format("2006-01-02"), len(day.elements))
 	}
-	return day.configuration.DayTitleAttributeValue(day)
+	return day.configuration.TitleAttribute(day)
 }
 
 func setColors[E Element](days []Day[E], configuration *Configuration[E]) {

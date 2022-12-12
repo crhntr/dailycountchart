@@ -41,7 +41,7 @@ func main() {
 	_ = http.ListenAndServe(":8080", http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		start := time.Now().AddDate(-2, 0, 0)
 
-		charts, err := dailycountchart.New(makeNRandomRecords(start, 1000), dailycountchart.DefaultConfiguration[Record]())
+		charts, err := dailycountchart.New(makeNRandomRecords(start, 1000), dailycountchart.Default[Record]())
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)
 			return

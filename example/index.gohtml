@@ -8,7 +8,7 @@
           const dailyDotEl = event.target
           document.body.insertAdjacentHTML('beforeend', `<div>clicked ${dailyDotEl.getAttribute('title')}</div>`)
 
-          totalClicked += parseInt(dailyDotEl.getAttribute("data-day"))
+          totalClicked += parseInt(dailyDotEl.getAttribute("data-value"))
           const totalClickedEl = document.querySelector("#total-clicked")
           totalClickedEl.innerText = totalClicked.toString()
       })
@@ -18,5 +18,5 @@
 {{range .}}
     {{.}}
 {{end}}
-<div id="total-clicked">0</div>
+<div>Total clicked: <span id="total-clicked">0</span></div>
 </body>
