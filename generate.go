@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	defaultHue = 127
+)
+
 type Element interface {
 	Timestamp() time.Time
 }
@@ -26,7 +30,7 @@ type Configuration[E Element] struct {
 func Default[E Element]() *Configuration[E] {
 	return &Configuration[E]{
 		EmptyDayColor: "#EAEAEA",
-		ColorFunc:     ColorFunc(127),
+		ColorFunc:     ColorFunc(defaultHue),
 	}
 }
 
@@ -37,12 +41,17 @@ var (
 	templates = template.Must(template.ParseFS(templatesFS, "*.gohtml"))
 )
 
-func New[E Element, List []E](elements List, configuration *Configuration[E]) ([]template.HTML, error) {
+type Chart struct {
+	Year int
+	HTML template.HTML
+}
+
+func New[E Element, List []E](elements List, configuration *Configuration[E]) ([]Chart, error) {
 	if configuration == nil {
 		configuration = Default[E]()
 	}
 	var (
-		result []template.HTML
+		result []Chart
 		buf    bytes.Buffer
 	)
 	for _, year := range years(elements) {
@@ -62,7 +71,10 @@ func New[E Element, List []E](elements List, configuration *Configuration[E]) ([
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, template.HTML(buf.String()))
+		result = append(result, Chart{
+			Year: year,
+			HTML: template.HTML(buf.String()),
+		})
 	}
 	return result, nil
 }
@@ -151,12 +163,16 @@ func setColors[E Element](days []Day[E], configuration *Configuration[E]) {
 			maxReleases = len(day.elements)
 		}
 	}
+	color := configuration.ColorFunc
+	if color == nil {
+		color = ColorFunc(defaultHue)
+	}
 	for i, day := range days {
 		if len(day.elements) == 0 {
 			days[i].color = configuration.EmptyDayColor
 			continue
 		}
-		days[i].color = configuration.ColorFunc(minReleases, maxReleases, len(day.elements))
+		days[i].color = color(minReleases, maxReleases, len(day.elements))
 	}
 }
 
