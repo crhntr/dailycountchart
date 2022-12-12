@@ -1,2 +1,3 @@
 # dailycountchart
-A simple configurable green dot chart.
+
+See the example.
