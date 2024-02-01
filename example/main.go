@@ -37,11 +37,11 @@ func makeNRandomRecords(start time.Time, n int) []Record {
 
 func main() {
 	templates := template.Must(template.New("").Parse(indexPage))
-	rand.Seed(time.Now().Unix())
 	_ = http.ListenAndServe(":8080", http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		start := time.Now().AddDate(-2, 0, 0)
 
-		charts, err := dailycountchart.New(makeNRandomRecords(start, 1000), nil)
+		values := makeNRandomRecords(start, 1000)
+		charts, err := dailycountchart.New(nil, values, Record.Timestamp)
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)
 			return

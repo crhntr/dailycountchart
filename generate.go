@@ -14,24 +14,14 @@ const (
 	defaultHue = 127
 )
 
-type Element interface {
-	Timestamp() time.Time
-}
-
-type Configuration[E Element] struct {
+type Configuration[E any] struct {
 	EmptyDayColor template.CSS
 	ColorFunc     func(min, max, n int) template.CSS
 
 	ChartHeadingTitle  func(year int) string
 	DataValueAttribute func(day Day[E]) string
 	TitleAttribute     func(day Day[E]) string
-}
-
-func Default[E Element]() *Configuration[E] {
-	return &Configuration[E]{
-		EmptyDayColor: "#EAEAEA",
-		ColorFunc:     ColorFunc(defaultHue),
-	}
+	Time               func(E) time.Time
 }
 
 var (
@@ -46,17 +36,23 @@ type Chart struct {
 	HTML template.HTML
 }
 
-func New[E Element, List []E](elements List, configuration *Configuration[E]) ([]Chart, error) {
-	if configuration == nil {
-		configuration = Default[E]()
-	}
+func New[E any, List ~[]E](configuration *Configuration[E], elements List, elementTime func(E) time.Time) ([]Chart, error) {
 	var (
 		result []Chart
 		buf    bytes.Buffer
 	)
-	for _, year := range years(elements) {
+	if configuration == nil {
+		configuration = &Configuration[E]{}
+	}
+	if configuration.ColorFunc == nil {
+		configuration.ColorFunc = ColorFunc(defaultHue)
+	}
+	if configuration.EmptyDayColor == "" {
+		configuration.EmptyDayColor = "#EAEAEA"
+	}
+	for _, year := range years(elements, elementTime) {
 		buf.Reset()
-		days, count := newYear(year, elements, configuration)
+		days, count := newYear(year, elements, configuration, elementTime)
 		err := templates.ExecuteTemplate(&buf, "daily-count-chart", struct {
 			Year int
 			*Configuration[E]
@@ -79,11 +75,11 @@ func New[E Element, List []E](elements List, configuration *Configuration[E]) ([
 	return result, nil
 }
 
-func newYear[E Element](year int, elements []E, configuration *Configuration[E]) ([]Day[E], int) {
+func newYear[E any](year int, elements []E, configuration *Configuration[E], elementTime func(E) time.Time) ([]Day[E], int) {
 	days := make([]Day[E], 0, 366)
 
 	janFirst := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-	lastTime := lastTimeInYear(year, elements)
+	lastTime := lastTimeInYear(year, elements, elementTime)
 
 	wn := 1
 	for t := janFirst; t.Year() < year+1 && !t.After(lastTime); t = t.AddDate(0, 0, 1) {
@@ -98,7 +94,7 @@ func newYear[E Element](year int, elements []E, configuration *Configuration[E])
 	}
 	count := 0
 	for _, el := range elements {
-		t := el.Timestamp()
+		t := elementTime(el)
 		if t.Year() != year {
 			continue
 		}
@@ -110,7 +106,7 @@ func newYear[E Element](year int, elements []E, configuration *Configuration[E])
 	return days, count
 }
 
-type Day[E Element] struct {
+type Day[E any] struct {
 	configuration *Configuration[E]
 	time          time.Time
 	elements      []E
@@ -152,7 +148,7 @@ func (day Day[E]) TitleAttribute() string {
 	return day.configuration.TitleAttribute(day)
 }
 
-func setColors[E Element](days []Day[E], configuration *Configuration[E]) {
+func setColors[E any](days []Day[E], configuration *Configuration[E]) {
 	minReleases := math.MaxInt
 	maxReleases := 0
 	for _, day := range days {
@@ -187,10 +183,10 @@ func ColorFunc(hue int8) func(min, max, n int) template.CSS {
 	}
 }
 
-func years[E Element](elements []E) []int {
+func years[E any](elements []E, elementTime func(E) time.Time) []int {
 	set := make(map[int]struct{})
 	for _, e := range elements {
-		set[e.Timestamp().Year()] = struct{}{}
+		set[elementTime(e).Year()] = struct{}{}
 	}
 	result := make([]int, 0, len(set))
 	for k := range set {
@@ -200,11 +196,11 @@ func years[E Element](elements []E) []int {
 	return result
 }
 
-func lastTimeInYear[E Element](year int, elements []E) time.Time {
+func lastTimeInYear[E any](year int, elements []E, elementTime func(E) time.Time) time.Time {
 	var t time.Time
 	for _, e := range elements {
-		if et := e.Timestamp(); et.Year() == year && (t.IsZero() || et.After(t)) {
-			t = e.Timestamp()
+		if et := elementTime(e); et.Year() == year && (t.IsZero() || et.After(t)) {
+			t = elementTime(e)
 		}
 	}
 	return t
