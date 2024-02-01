@@ -1,3 +1,3 @@
 module github.com/crhntr/dailycountchart
 
-go 1.19
+go 1.21
